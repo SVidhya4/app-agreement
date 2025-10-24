@@ -13,74 +13,179 @@
     <div class="container">
         <h1>LISA App - Terms & Download</h1>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            <ul class="flash-messages">
-            {% for category, message in messages %}
-              <li class="{{ category or 'message' }}">{{ message }}</li>
-            {% endfor %}
-            </ul>
-          {% endif %}
-        {% endwith %}
-
-        <div class="terms">
-            <p><strong>Using This App (LISA - Live Intelligent Sight Assistance):</strong></p>
-            <p>Thanks for showing interest in LISA! This version is just for you to test and evaluate for **personal, non-commercial use only.**</p>
-            <p>By downloading, please agree to these simple conditions:</p>
-            <ul>
-                <li>**Keep it to yourself:** Please don't share, sell, or redistribute this app file to anyone else.</li>
-                <li>**No business use:** This app isn't intended for commercial activities or making money.</li>
-                <li>**Leave the code as is:** Please don't try to modify, reverse engineer, take apart, or copy the app's code.</li>
+        <div id="messageArea">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                <ul class="flash-messages">
+                {% for category, message in messages %}
+                  <li class="{{ category or 'message' }}">{{ message }}</li>
+                {% endfor %}
                 </ul>
-            <p>Copyright © 2025 Sri Vidhya Putala. All rights reserved.</p>
+              {% endif %}
+            {% endwith %}
         </div>
 
-        <form id="agreementForm" action="{{ url_for('submit_agreement') }}" method="POST">
-            <label for="nameInput">Name:</label>
-            <input type="text" id="nameInput" name="user_name" required>
-
-            <label for="emailInput">Email:</label>
-            <input type="email" id="emailInput" name="user_email" required>
-
-            <div class="checkbox-container">
-                <input type="checkbox" id="agreeCheckbox" name="agree_terms" value="yes" required>
-                <label for="agreeCheckbox">I have read and agree to the terms of use.</label>
+        <div id="initialForm">
+            <div class="terms">
+                <p><strong>Using This App (LISA - Live Intelligent Sight Assistance):</strong></p>
+                <p>Thanks for showing interest in LISA! This version is just for you to test and evaluate for **personal, non-commercial use only.**</p>
+                <p>By downloading, please agree to these simple conditions:</p>
+                <ul>
+                    <li>**Keep it to yourself:** Please don't share, sell, or redistribute this app file to anyone else.</li>
+                    <li>**No business use:** This app isn't intended for commercial activities or making money.</li>
+                    <li>**Leave the code as is:** Please don't try to modify, reverse engineer, take apart, or copy the app's code.</li>
+                    <li>**It's my work:** Please don't represent this app as your own project or creation.</li>
+                </ul>
+                <p>Copyright © 2025 Sri Vidhya Putala. All rights reserved.</p>
             </div>
-            <div id="checkboxError" class="error-message" style="display: none;">You must agree to the terms to proceed.</div>
 
-            <button type="submit" id="submitButton" disabled>
-                Agree & Download APK
-                <span class="spinner"></span>
-            </button>
-        </form>
+            <form id="agreementForm"> <label for="nameInput">Name:</label>
+                <input type="text" id="nameInput" name="user_name" required>
+
+                <label for="emailInput">Email:</label>
+                <input type="email" id="emailInput" name="user_email" required>
+
+                <div class="checkbox-container">
+                    <input type="checkbox" id="agreeCheckbox" name="agree_terms" value="yes" required>
+                    <label for="agreeCheckbox">I have read and agree to the terms of use.</label>
+                </div>
+                <div id="checkboxError" class="error-message" style="display: none;">You must agree to the terms to proceed.</div>
+
+                <button type="submit" id="submitButton" disabled>
+                    Agree & Send OTP
+                    <span class="spinner" id="initialSpinner"></span>
+                </button>
+            </form>
+        </div>
+
+        <div id="otpForm" style="display: none;">
+            <p id="otpInfoMessage">An OTP has been sent to your email. Please enter it below:</p>
+            <form id="verifyOtpForm">
+                <label for="otpInput">OTP Code:</label>
+                <input type="text" id="otpInput" name="otp_code" required inputmode="numeric" pattern="\d{6}">
+                <input type="hidden" id="otpEmail" name="user_email"> <div id="otpError" class="error-message" style="display: none;">Invalid OTP. Please try again.</div>
+
+                <button type="submit" id="verifyButton">
+                    Verify OTP & Download
+                     <span class="spinner" id="otpSpinner"></span>
+                </button>
+                </form>
+        </div>
+
     </div>
 
 <script>
+    const initialFormDiv = document.getElementById('initialForm');
+    const otpFormDiv = document.getElementById('otpForm');
+    const agreementForm = document.getElementById('agreementForm');
+    const verifyOtpForm = document.getElementById('verifyOtpForm');
+
     const agreeCheckbox = document.getElementById('agreeCheckbox');
     const submitButton = document.getElementById('submitButton');
+    const verifyButton = document.getElementById('verifyButton');
     const checkboxError = document.getElementById('checkboxError');
-    const form = document.getElementById('agreementForm');
-    const spinner = submitButton.querySelector('.spinner');
+    const otpError = document.getElementById('otpError');
+    const messageArea = document.getElementById('messageArea'); // To display server messages
 
-    // Enable button only when checkbox is checked
+    const initialSpinner = document.getElementById('initialSpinner');
+    const otpSpinner = document.getElementById('otpSpinner');
+
+    // Enable initial submit button only when checkbox is checked
     agreeCheckbox.addEventListener('change', function() {
         submitButton.disabled = !this.checked;
-        checkboxError.style.display = 'none'; // Hide error when checkbox is changed
+        checkboxError.style.display = 'none';
     });
 
-    form.addEventListener('submit', function(event) {
-        // Double-check checkbox on submit
+    // Handle Initial Form Submission (Send OTP)
+    agreementForm.addEventListener('submit', function(event) {
+        event.preventDefault(); // Stop default form submission
+
         if (!agreeCheckbox.checked) {
             checkboxError.style.display = 'block';
-            event.preventDefault(); // Stop form submission
-        } else {
-            checkboxError.style.display = 'none';
-            // Show spinner and disable button on successful submission attempt
-            submitButton.disabled = true;
-            spinner.style.display = 'inline-block';
-            submitButton.style.opacity = '0.8';
+            return; // Don't proceed
         }
+        checkboxError.style.display = 'none';
+        submitButton.disabled = true;
+        initialSpinner.style.display = 'inline-block';
+        clearMessages(); // Clear previous messages
+
+        const formData = new FormData(agreementForm);
+        const userEmail = formData.get('user_email'); // Get email for later
+
+        fetch("{{ url_for('send_otp') }}", { // Send to new Flask route
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                initialFormDiv.style.display = 'none'; // Hide initial form
+                otpFormDiv.style.display = 'block';   // Show OTP form
+                document.getElementById('otpEmail').value = userEmail; // Store email in hidden field
+                displayMessage(data.message, 'success');
+            } else {
+                // Show error from Flask (e.g., validation, email send fail)
+                displayMessage(data.message || 'An error occurred sending OTP.', 'error');
+                submitButton.disabled = false; // Re-enable button on error
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            displayMessage('A network error occurred. Please try again.', 'error');
+            submitButton.disabled = false;
+        })
+        .finally(() => {
+            initialSpinner.style.display = 'none'; // Hide spinner
+        });
     });
+
+    // Handle OTP Verification Form Submission
+    verifyOtpForm.addEventListener('submit', function(event) {
+        event.preventDefault(); // Stop default form submission
+
+        verifyButton.disabled = true;
+        otpSpinner.style.display = 'inline-block';
+        otpError.style.display = 'none'; // Hide previous OTP error
+        clearMessages(); // Clear previous messages
+
+        const formData = new FormData(verifyOtpForm);
+
+        fetch("{{ url_for('verify_otp') }}", { // Send to verify route
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.download_url) {
+                displayMessage('Verification successful! Starting download...', 'success');
+                // Redirect to the download URL provided by the server
+                window.location.href = data.download_url;
+                // Keep button disabled after successful download start
+            } else {
+                otpError.innerText = data.message || 'Invalid OTP.';
+                otpError.style.display = 'block';
+                verifyButton.disabled = false; // Re-enable verify button on error
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            otpError.innerText = 'A network error occurred during verification.';
+            otpError.style.display = 'block';
+            verifyButton.disabled = false;
+        })
+        .finally(() => {
+             otpSpinner.style.display = 'none'; // Hide spinner
+        });
+    });
+
+    // Helper to display messages
+    function displayMessage(message, category = 'message') {
+        messageArea.innerHTML = `<ul class="flash-messages"><li class="${category}">${message}</li></ul>`;
+    }
+     function clearMessages() {
+         messageArea.innerHTML = '';
+     }
+
 </script>
 
 </body>

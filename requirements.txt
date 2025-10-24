@@ -1,3 +1,5 @@
 Flask
 pymongo
 gunicorn
+sendgrid
+requests
