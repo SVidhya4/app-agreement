@@ -57,7 +57,7 @@ def send_otp_email(recipient_email, recipient_name, otp): # Modified to send OTP
 
     subject = "Your LISA App Verification Code"
     body_html = f"""Hi {recipient_name},<br><br>
-Thank you for agreeing to the terms for the LISA app.<br><br>
+Thank you for showing interest in trying out the **LISA app**.<br><br>
 Your One-Time Password (OTP) is: <strong>{otp}</strong><br><br>
 This code will expire in 10 minutes.<br><br>
 Best regards,<br>
